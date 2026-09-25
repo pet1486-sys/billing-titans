@@ -82,11 +82,13 @@
             color: #64748b;
         }
 
-        /* CSS สำหรับโหมดการพิมพ์ (Print) */
+        /* -------------------------------------------------------------------------- */
+        /* แก้ไขปัญหาหน้าแรกลอย/ว่างเปล่าเด็ดขาด สำหรับระบบพิมพ์ (Print Media) */
+        /* -------------------------------------------------------------------------- */
         @media print {
             @page {
                 size: A4 portrait;
-                margin: 0;
+                margin: 0 !important;
             }
 
             html, body {
@@ -101,23 +103,27 @@
                 print-color-adjust: exact !important;
             }
 
-            .no-print {
+            .no-print, header, aside, #billModal {
                 display: none !important;
+            }
+
+            /* ย้ายเฉพาะโซนพิมพ์ขึ้นไปชิดมุมซ้ายบนสุดของหน้ากระดาษ */
+            #printArea {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 210mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: block !important;
             }
 
             .mobile-preview-wrapper {
                 display: block !important;
-                width: 100% !important;
+                width: 210mm !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 overflow: visible !important;
-            }
-
-            .print-area {
-                padding: 0 !important;
-                margin: 0 !important;
-                width: 100% !important;
-                display: block !important;
             }
 
             .a4-page {
@@ -125,7 +131,7 @@
                 margin: 0 !important;
                 border: none !important;
                 width: 210mm !important;
-                min-height: 297mm !important;
+                height: 297mm !important;
                 padding: 15mm 15mm !important;
                 box-sizing: border-box !important;
                 transform: none !important;
@@ -343,7 +349,6 @@
             });
         }
 
-        // ดึงไฟล์ SKU ฝังแบบยืดหยุ่น (รองรับทั้งพิมพ์เล็ก sku.xlsx และพิมพ์ใหญ่ SKU.xlsx)
         async function loadEmbeddedSKUFile() {
             const statusDiv = document.getElementById('embeddedSkuStatus');
             const possibleFilenames = ['SKU.xlsx', 'sku.xlsx', 'SKU.csv', 'sku.csv'];
@@ -367,7 +372,7 @@
                         break;
                     }
                 } catch (err) {
-                    // ลองค้นชื่อไฟล์ถัดไปในรอบลูป
+                    // ดึงชื่อไฟล์ถัดไป
                 }
             }
 
