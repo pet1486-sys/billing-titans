@@ -39,7 +39,6 @@
             -webkit-overflow-scrolling: touch;
         }
 
-        /* โหมดแสดงผลบนหน้าจอปกติ (Screen) */
         .mobile-preview-wrapper {
             width: 100%;
             display: flex;
@@ -57,18 +56,18 @@
 
         .a4-page-preview {
             width: 210mm;
-            min-height: 297mm;
+            min-height: 295mm;
             background: white;
             margin: 0 auto 20px auto;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-            padding: 18mm 18mm;
+            padding: 15mm 15mm;
             box-sizing: border-box;
             position: relative;
         }
 
         .half-a4-divider {
             border-top: 2px dashed #94a3b8;
-            margin: 20px 0;
+            margin: 15px 0;
             position: relative;
         }
         .half-a4-divider::after {
@@ -83,7 +82,7 @@
         }
 
         /* -------------------------------------------------------------------------- */
-        /* แก้ไขปัญหาหน้าแรกลอย/ว่างเปล่าเด็ดขาด สำหรับระบบพิมพ์ (Print Media) */
+        /* แก้ไขสเกลพิมพ์บนมือถือ ป้องกันเนื้อหาล้นเป็น 2 หน้าเป๊ะๆ */
         /* -------------------------------------------------------------------------- */
         @media print {
             @page {
@@ -107,7 +106,6 @@
                 display: none !important;
             }
 
-            /* ย้ายเฉพาะโซนพิมพ์ขึ้นไปชิดมุมซ้ายบนสุดของหน้ากระดาษ */
             #printArea {
                 position: absolute !important;
                 top: 0 !important;
@@ -131,12 +129,14 @@
                 margin: 0 !important;
                 border: none !important;
                 width: 210mm !important;
-                height: 297mm !important;
-                padding: 15mm 15mm !important;
+                height: 295mm !important; /* ปรับลดเหลือ 295mm เพื่อกันระยะปัดเศษล้นของ Safari มือถือ */
+                max-height: 295mm !important;
+                padding: 12mm 15mm !important;
                 box-sizing: border-box !important;
                 transform: none !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
+                overflow: hidden !important; /* ล็อกไม่ให้เนื้อหาทะลุลงหน้า 2 */
             }
 
             .mobile-preview-wrapper:not(:last-child) .a4-page {
@@ -451,11 +451,9 @@
                     let discountAmount = 0;
                     let hasDiscount = false;
 
-                    if (!isPaid && excelTotal > 0) {
-                        if (calculatedGrandTotal > excelTotal) {
-                            discountAmount = calculatedGrandTotal - excelTotal;
-                            hasDiscount = true;
-                        }
+                    if (excelTotal > 0 && calculatedGrandTotal > excelTotal) {
+                        discountAmount = calculatedGrandTotal - excelTotal;
+                        hasDiscount = true;
                     }
 
                     if (items.length > 0) {
@@ -514,7 +512,7 @@
                 });
                 const subtotal = bill.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
                 bill.calculatedGrandTotal = subtotal + bill.shipping;
-                if (!bill.isPaid && bill.excelTotal > 0 && bill.calculatedGrandTotal > bill.excelTotal) {
+                if (bill.excelTotal > 0 && bill.calculatedGrandTotal > bill.excelTotal) {
                     bill.discountAmount = bill.calculatedGrandTotal - bill.excelTotal;
                     bill.hasDiscount = true;
                 } else {
@@ -548,10 +546,10 @@
                 const totals = getBillTotals(bill);
                 let badgeHTML = '';
                 
-                if (bill.isPaid) {
-                    badgeHTML = `<span class="bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded text-[10px] ml-1">โอนแล้ว (${bill.payMethod})</span>`;
-                } else if (bill.hasDiscount) {
+                if (bill.hasDiscount) {
                     badgeHTML = `<span class="bg-red-100 text-red-800 font-bold px-1.5 py-0.5 rounded text-[10px] ml-1">ลด ฿${formatMoney(bill.discountAmount)}</span>`;
+                } else if (bill.isPaid) {
+                    badgeHTML = `<span class="bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded text-[10px] ml-1">โอนแล้ว (${bill.payMethod})</span>`;
                 }
 
                 const itemDiv = document.createElement('div');
@@ -602,10 +600,11 @@
             const totals = getBillTotals(bill);
 
             let paymentBadge = '';
-            if (bill.isPaid) {
+            if (bill.hasDiscount) {
+                const payText = bill.isPaid ? ` (โอนผ่าน ${bill.payMethod})` : '';
+                paymentBadge = `<span class="inline-block bg-red-500 text-white font-bold px-3 py-1 rounded text-xs shadow-sm">⚠️ ออเดอร์นี้มีส่วนลด ${formatMoney(bill.discountAmount)} บาท${payText} (ยอดจัดเก็บ: ${formatMoney(bill.excelTotal)} B)</span>`;
+            } else if (bill.isPaid) {
                 paymentBadge = `<span class="inline-block bg-emerald-500 text-white font-bold px-3 py-1 rounded text-xs shadow-sm">✓ จ่ายเงินแล้ว (โอนผ่าน ${bill.payMethod})</span>`;
-            } else if (bill.hasDiscount) {
-                paymentBadge = `<span class="inline-block bg-red-500 text-white font-bold px-3 py-1 rounded text-xs shadow-sm">⚠️ ออเดอร์นี้มีส่วนลด ${formatMoney(bill.discountAmount)} บาท (ยอดจัดเก็บ: ${formatMoney(bill.excelTotal)} B)</span>`;
             } else {
                 paymentBadge = `<span class="inline-block bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded text-[11px]">ชำระเงินปลายทาง / COD</span>`;
             }
@@ -613,24 +612,24 @@
             return `
                 <div class="${isCompact ? 'text-[11px]' : 'text-xs'} text-slate-800 flex flex-col justify-between h-full">
                     <div>
-                        <div class="flex justify-between items-start border-b-2 border-slate-800 pb-3 mb-3">
+                        <div class="flex justify-between items-start border-b-2 border-slate-800 pb-2 mb-2">
                             <div>
                                 <h2 class="${isCompact ? 'text-base' : 'text-xl'} font-bold tracking-tight text-slate-900">${companyInfo.nameTh}</h2>
                                 <p class="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">${companyInfo.nameEn}</p>
-                                <p class="mt-1 text-slate-600 max-w-md">${companyInfo.address}</p>
+                                <p class="mt-0.5 text-slate-600 max-w-md">${companyInfo.address}</p>
                                 <p class="text-slate-600"><span class="font-bold">โทร:</span> ${companyInfo.tel}</p>
                             </div>
                             <div class="text-right">
                                 <div class="${isCompact ? 'text-base' : 'text-lg'} font-extrabold uppercase tracking-wide bg-slate-900 text-white px-3 py-1 rounded inline-block">
                                     บิลส่งของ
                                 </div>
-                                <div class="mt-2 text-slate-600">
+                                <div class="mt-1.5 text-slate-600">
                                     <div><span class="font-semibold">วันที่ออกบิล:</span> ${bill.date}</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 mb-3 flex justify-between items-center">
+                        <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 mb-2 flex justify-between items-center">
                             <div>
                                 <span class="font-bold text-slate-500 uppercase text-[10px] block">ชื่อลูกค้า / Customer:</span>
                                 <span class="${isCompact ? 'text-xs' : 'text-sm'} font-bold text-slate-900">${bill.customer}</span>
@@ -640,26 +639,26 @@
                             </div>
                         </div>
 
-                        <table class="w-full border-collapse border border-slate-300 text-left mb-3">
+                        <table class="w-full border-collapse border border-slate-300 text-left mb-2">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
-                                    <th class="border-r border-slate-300 p-1.5 text-center w-8">#</th>
-                                    <th class="border-r border-slate-300 p-1.5">รายการสินค้า</th>
-                                    <th class="border-r border-slate-300 p-1.5 text-center w-16">จำนวน</th>
-                                    <th class="border-r border-slate-300 p-1.5 text-right w-24">ราคา/หน่วย</th>
-                                    <th class="p-1.5 text-right w-24">ราคารวม</th>
+                                    <th class="border-r border-slate-300 p-1 text-center w-8">#</th>
+                                    <th class="border-r border-slate-300 p-1">รายการสินค้า</th>
+                                    <th class="border-r border-slate-300 p-1 text-center w-16">จำนวน</th>
+                                    <th class="border-r border-slate-300 p-1 text-right w-24">ราคา/หน่วย</th>
+                                    <th class="p-1 text-right w-24">ราคารวม</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${bill.items.map((item, idx) => `
                                     <tr class="border-b border-slate-200 hover:bg-slate-50 ${item.price === 0 ? 'bg-red-50/50' : ''}">
-                                        <td class="border-r border-slate-200 p-1.5 text-center">${idx + 1}</td>
-                                        <td class="border-r border-slate-200 p-1.5 font-medium">
+                                        <td class="border-r border-slate-200 p-1 text-center">${idx + 1}</td>
+                                        <td class="border-r border-slate-200 p-1 font-medium">
                                             ${item.name}${item.price === 0 ? '<span class="text-[10px] text-red-500 block font-normal">(ไม่พบราคาในตาราง SKU)</span>' : ''}
                                         </td>
-                                        <td class="border-r border-slate-200 p-1.5 text-center font-semibold">x ${item.qty}</td>
-                                        <td class="border-r border-slate-200 p-1.5 text-right ${item.price === 0 ? 'text-red-600 font-bold' : ''}">${formatMoney(item.price)}</td>
-                                        <td class="p-1.5 text-right font-semibold ${item.price === 0 ? 'text-red-600' : ''}">${formatMoney(item.qty * item.price)}</td>
+                                        <td class="border-r border-slate-200 p-1 text-center font-semibold">x ${item.qty}</td>
+                                        <td class="border-r border-slate-200 p-1 text-right ${item.price === 0 ? 'text-red-600 font-bold' : ''}">${formatMoney(item.price)}</td>
+                                        <td class="p-1 text-right font-semibold ${item.price === 0 ? 'text-red-600' : ''}">${formatMoney(item.qty * item.price)}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -667,20 +666,20 @@
                     </div>
 
                     <div>
-                        <div class="flex justify-between items-end border-t border-slate-300 pt-2 mt-2">
-                            <div class="text-[10px] text-slate-500 max-w-xs space-y-1">
+                        <div class="flex justify-between items-end border-t border-slate-300 pt-1.5 mt-1">
+                            <div class="text-[10px] text-slate-500 max-w-xs space-y-0.5">
                                 <p>* ได้รับสินค้าตามรายการข้างต้นถูกต้องและอยู่ในสภาพเรียบร้อย</p>
-                                <div class="pt-6 flex gap-8">
-                                    <div class="text-center border-t border-dashed border-slate-400 pt-1 w-28">
+                                <div class="pt-5 flex gap-8">
+                                    <div class="text-center border-t border-dashed border-slate-400 pt-0.5 w-28">
                                         ผู้รับของ / Customer
                                     </div>
-                                    <div class="text-center border-t border-dashed border-slate-400 pt-1 w-28">
+                                    <div class="text-center border-t border-dashed border-slate-400 pt-0.5 w-28">
                                         ผู้ส่งของ / Authorized
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="w-52 space-y-1 text-right">
+                            <div class="w-52 space-y-0.5 text-right">
                                 <div class="flex justify-between text-slate-600">
                                     <span>รวมเงิน (Subtotal):</span>
                                     <span class="font-semibold">${formatMoney(totals.subtotal)} B</span>
@@ -689,7 +688,7 @@
                                     <span>ค่าจัดส่ง (Shipping):</span>
                                     <span class="font-semibold">+${formatMoney(totals.shipping)} B</span>
                                 </div>
-                                <div class="flex justify-between items-center text-slate-900 border-t-2 border-slate-800 pt-1 mt-1">
+                                <div class="flex justify-between items-center text-slate-900 border-t-2 border-slate-800 pt-0.5 mt-0.5">
                                     <span class="font-bold">ยอดเก็บทั้งสิ้น:</span>
                                     <span class="${isCompact ? 'text-sm' : 'text-base'} font-black ${bill.hasDiscount ? 'text-red-600' : 'text-blue-700'}">${formatMoney(totals.grandTotal)} B</span>
                                 </div>
@@ -887,7 +886,7 @@
                     bill.shipping = shipping;
                     bill.items = items;
                     bill.calculatedGrandTotal = items.reduce((s, i) => s + (i.qty * i.price), 0) + shipping;
-                    if (!bill.isPaid && bill.excelTotal > 0 && bill.calculatedGrandTotal > bill.excelTotal) {
+                    if (bill.excelTotal > 0 && bill.calculatedGrandTotal > bill.excelTotal) {
                         bill.discountAmount = bill.calculatedGrandTotal - bill.excelTotal;
                         bill.hasDiscount = true;
                     } else {
