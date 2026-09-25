@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title id="pageTitle">บิลส่งของ_ไททันส์เกน</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Prompt & Sarabun -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- SheetJS ไลบรารีอ่านไฟล์ Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'Sarabun', 'sans-serif'],
+                        sarabun: ['Sarabun', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Prompt', 'Sarabun', sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        /* รองรับการเลื่อนบน iOS Safari */
+        .touch-scroll {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* CSS สำหรับย่อขยายหน้าตัวอย่าง A4 ให้พอดีจอมือถือ */
+        .mobile-preview-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        @media screen and (max-width: 768px) {
+            .a4-page-preview {
+                transform-origin: top center;
+                transform: scale(calc((100vw - 32px) / 794)); /* ย่อขนาด 210mm (794px) ตามความกว้างจอมือถือ */
+                margin-bottom: calc(-1000px + (100vw * 1.1)) !important; /* ปรับ margin ลบเพื่อตัดพื้นที่ว่างจากการ scale */
+            }
+        }
+
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 0;
+            }
+
+            html, body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-area {
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                display: block !important;
+            }
+
+            .a4-page {
+                box-shadow: none !important;
+                margin: 0 !important;
+                border: none !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                padding: 15mm 15mm !important;
+                page-break-after: always;
+                page-break-inside: avoid;
+                box-sizing: border-box !important;
+                transform: none !important; /* ยกเลิกการย่อขนาดเมื่อพิมพ์ */
+            }
+
+            .a4-page:last-child {
+                page-break-after: auto;
+            }
+        }
+
+        .a4-page-preview {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            padding: 18mm 18mm;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .half-a4-divider {
+            border-top: 2px dashed #94a3b8;
+            margin: 20px 0;
+            position: relative;
+        }
+        .half-a4-divider::after {
+            content: "✂ กรรไกรตัดแบ่งครึ่ง A4";
+            position: absolute;
+            top: -12px;
+            right: 20px;
+            background: #f1f5f9;
+            padding: 0 8px;
+            font-size: 11px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Navigation Bar -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white p-2 sm:p-2.5 rounded-xl shadow">
+                    <i class="fa-solid fa-file-invoice-dollar text-lg sm:text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold tracking-wide">ระบบพิมพ์บิลส่งของ</h1>
+                    <p class="text-[10px] sm:text-xs text-slate-400">บริษัท ไททันส์เกน จำกัด (TITANS GAIN CO., LTD.)</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2 w-full sm:w-auto justify-end mt-1 sm:mt-0">
+                <button onclick="openCreateModal()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center justify-center shadow-sm">
+                    <i class="fa-solid fa-plus mr-1.5"></i> สร้างบิลใหม่
+                </button>
+                <button onclick="triggerPrint()" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-500 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-print mr-1.5 sm:mr-2"></i> พิมพ์ / Save PDF
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <div class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 flex flex-col lg:flex-row gap-5">
+
+        <!-- Sidebar / Control Panel -->
+        <aside class="w-full lg:w-80 space-y-4 no-print">
+            
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">ผู้ออกบิล / ผู้ขาย</h3>
+                <div class="text-sm font-bold text-slate-800">บริษัท ไททันส์เกน จำกัด</div>
+                <div class="text-xs text-slate-500 mt-1 leading-relaxed">
+                    21 ซอย 1 ถนนพหลโยธิน ตำบลปากเพรียว อำเภอเมืองสระบุรี จ.สระบุรี 18000<br>
+                    <span class="font-semibold text-slate-700">โทร:</span> 064-921-8415
+                </div>
+            </div>
+
+            <!-- File Upload Section -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">นำเข้าข้อมูลไฟล์</h3>
+                
+                <!-- 1. Excel Order File Input -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">1. อัปโหลด Excel ออเดอร์ (Export Data)</label>
+                    <input type="file" id="excelOrderInput" accept=".xlsx, .xls, .csv" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-200 rounded-lg"/>
+                    <p id="excelOrderStatus" class="mt-1 text-[11px] text-emerald-600 hidden"><i class="fa-solid fa-check"></i> โหลดข้อมูลออเดอร์จาก Excel แล้ว</p>
+                </div>
+
+                <!-- 2. Embedded SKU File Status & Manual Upload Option -->
+                <div class="pt-2 border-t border-slate-100">
+                    <label class="block text-xs font-medium text-slate-700 mb-1">2. ตาราง SKU & ราคา</label>
+                    
+                    <!-- สถานะการดึงไฟล์ฝังอัตโนมัติ -->
+                    <div id="embeddedSkuStatus" class="text-[11px] p-2 bg-slate-50 rounded-lg border border-slate-200 mb-2 flex items-center justify-between">
+                        <span class="text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-1"></i> กำลังโหลด sku.xlsx ...</span>
+                    </div>
+
+                    <!-- อัปโหลดเปลี่ยนราคาเองชั่วคราว -->
+                    <div class="mt-1">
+                        <span class="text-[10px] text-slate-400 block mb-1">* หรืออัปโหลดไฟล์ SKU ใหม่ทับราคาเดิม:</span>
+                        <input type="file" id="skuInput" accept=".xlsx, .xls, .csv" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer border border-slate-200 rounded-lg"/>
+                        <p id="skuStatus" class="mt-1 text-[11px] text-emerald-600 hidden"><i class="fa-solid fa-check"></i> อัปเดตราคาจากไฟล์ใหม่เรียบร้อยแล้ว</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Layout Options -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">รูปแบบกระดาษพิมพ์</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="layoutMode" value="full" checked onchange="changeLayoutMode('full')" class="peer hidden">
+                        <div class="p-2.5 text-center rounded-lg border border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50/50 peer-checked:text-blue-700 transition">
+                            <i class="fa-solid fa-file text-lg mb-1 block"></i>
+                            <span class="text-xs font-medium">A4 เต็มหน้า (1 บิล)</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="layoutMode" value="half" onchange="changeLayoutMode('half')" class="peer hidden">
+                        <div class="p-2.5 text-center rounded-lg border border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50/50 peer-checked:text-blue-700 transition">
+                            <i class="fa-solid fa-file-lines text-lg mb-1 block"></i>
+                            <span class="text-xs font-medium">A4 ครึ่งหน้า (2 บิล)</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Bill Selector Filter -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">เลือกรายการบิลพิมพ์</h3>
+                    <button onclick="toggleSelectAll()" id="selectAllBtn" class="text-xs text-blue-600 hover:underline font-medium">
+                        เลือกทั้งหมด
+                    </button>
+                </div>
+                <div id="billSelectList" class="space-y-2 max-h-60 sm:max-h-72 overflow-y-auto touch-scroll pr-1"></div>
+            </div>
+        </aside>
+
+        <!-- Right Print Preview Area -->
+        <main class="flex-1 flex flex-col items-center w-full min-w-0">
+            <div class="w-full max-w-[210mm] mb-3 bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center no-print">
+                <div class="text-xs text-slate-500 font-medium">
+                    <i class="fa-solid fa-eye text-slate-400 mr-1"></i> ตัวอย่างก่อนพิมพ์
+                </div>
+                <div class="text-xs text-slate-500">
+                    พิมพ์: <span id="selectedCountBadge" class="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">0</span> รายการ
+                </div>
+            </div>
+
+            <div id="printArea" class="print-area w-full flex flex-col items-center overflow-x-hidden"></div>
+        </main>
+    </div>
+
+    <!-- Modal Form แบบ Responsive รองรับ iOS Safari -->
+    <div id="billModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-2 sm:p-4 no-print">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh] max-h-[90dvh]">
+            <div class="bg-slate-900 text-white px-4 sm:px-6 py-3.5 flex justify-between items-center shrink-0">
+                <h3 id="modalTitle" class="text-sm sm:text-base font-bold flex items-center gap-2">แก้ไขข้อมูลบิล</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <div class="p-4 sm:p-6 overflow-y-auto touch-scroll space-y-4 text-xs sm:text-sm flex-1">
+                <input type="hidden" id="editBillId">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">ชื่อลูกค้า / ชื่อร้านค้า *</label>
+                        <input type="text" id="formCustomer" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs sm:text-sm">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">วันที่ออกบิล *</label>
+                        <input type="text" id="formDate" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs sm:text-sm">
+                    </div>
+                </div>
+
+                <div class="pt-1">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="font-bold text-slate-800">รายการสินค้า</label>
+                        <button type="button" onclick="addProductRow()" class="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 font-semibold px-2.5 py-1.5 rounded-lg transition"><i class="fa-solid fa-plus"></i> เพิ่มรายการ</button>
+                    </div>
+
+                    <!-- Responsive Product List Area -->
+                    <div id="modalItemsContainer" class="space-y-2"></div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-1">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">ค่าจัดส่ง (บาท)</label>
+                        <input type="number" id="formShipping" oninput="calculateModalTotal()" class="w-full border border-slate-300 rounded-lg p-2.5 text-xs sm:text-sm">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">ยอดเก็บเงินรวมทั้งสิ้น (บาท)</label>
+                        <input type="number" id="formTotal" readonly class="w-full bg-slate-100 border border-slate-300 font-bold text-slate-800 rounded-lg p-2.5 text-xs sm:text-sm cursor-not-allowed">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-4 sm:px-6 py-3 border-t border-slate-200 flex justify-end gap-2 shrink-0">
+                <button onclick="closeModal()" class="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg">ยกเลิก</button>
+                <button onclick="saveBillData()" class="px-4 sm:px-5 py-2 text-xs sm:text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 rounded-lg shadow">บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const companyInfo = {
+            nameTh: "บริษัท ไททันส์เกน จำกัด",
+            nameEn: "TITANS GAIN CO., LTD.",
+            address: "21 ซอย 1 ถนนพหลโยธิน ตำบลปากเพรียว อำเภอเมืองสระบุรี จ.สระบุรี 18000",
+            tel: "064-921-8415"
+        };
+
+        let skuPriceMap = {};
+
+        function getUnitPriceStrict(itemName) {
+            if (!itemName) return 0;
+            const key = String(itemName).trim().toLowerCase();
+            if (Object.prototype.hasOwnProperty.call(skuPriceMap, key)) {
+                return skuPriceMap[key];
+            }
+            return 0;
+        }
+
+        function processSKURows(rows) {
+            skuPriceMap = {};
+            rows.forEach(row => {
+                const price = parseFloat(row['ราคา'] || row['Price'] || row['ราคาต่อหน่วย'] || row['UnitPrice'] || 0);
+
+                if (!isNaN(price) && price > 0) {
+                    const name1 = row['Name'] || row['name'] || row['ชื่อสินค้า'] || row['SKU'];
+                    if (name1) {
+                        skuPriceMap[String(name1).trim().toLowerCase()] = price;
+                    }
+
+                    const name2 = row['name 2'] || row['Name 2'] || row['ชื่อสินค้า 2'] || row['ชื่อสินค้า2'];
+                    if (name2) {
+                        skuPriceMap[String(name2).trim().toLowerCase()] = price;
+                    }
+                }
+            });
+        }
+
+        async function loadEmbeddedSKUFile() {
+            const statusDiv = document.getElementById('embeddedSkuStatus');
+            try {
+                const response = await fetch('sku.xlsx');
+                if (!response.ok) throw new Error("ไม่พบไฟล์ sku.xlsx");
+
+                const arrayBuffer = await response.arrayBuffer();
+                const data = new Uint8Array(arrayBuffer);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet);
+
+                processSKURows(rows);
+
+                statusDiv.className = "text-[11px] p-2 bg-emerald-50 text-emerald-700 font-medium rounded-lg border border-emerald-200 mb-2 flex items-center justify-between";
+                statusDiv.innerHTML = `<span><i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> โหลดราคาจากไฟล์ฝัง (sku.xlsx) สำเร็จ</span>`;
+            } catch (err) {
+                statusDiv.className = "text-[11px] p-2 bg-amber-50 text-amber-700 font-medium rounded-lg border border-amber-200 mb-2 flex items-center justify-between";
+                statusDiv.innerHTML = `<span><i class="fa-solid fa-triangle-exclamation text-amber-600 mr-1"></i> ไม่พบ sku.xlsx ฝัง (ใช้อัปโหลดเองได้)</span>`;
+            }
+        }
+
+        let billsData = [];
+        let currentLayout = 'full';
+
+        function updateDocumentTitle() {
+            if (billsData.length > 0) {
+                const dates = [...new Set(billsData.map(b => b.date.replace(/\//g, '-')))];
+                const formattedDate = dates.join('_');
+                document.title = `บิลส่งของ_${formattedDate}`;
+            } else {
+                document.title = `บิลส่งของ_ไททันส์เกน`;
+            }
+        }
+
+        function triggerPrint() {
+            updateDocumentTitle();
+            window.print();
+        }
+
+        // 1. อ่านไฟล์ Excel ออเดอร์
+        document.getElementById('excelOrderInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheetName = workbook.SheetNames[0];
+                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+                let newBills = [];
+
+                rows.forEach((row, index) => {
+                    const customerName = String(row['ชื่อลูกค้า'] || row['Customer'] || 'ลูกค้าทั่วไป').trim();
+                    let dateStr = String(row['วันที่สั่งซื้อ'] || '').trim();
+                    let date = dateStr ? dateStr.split(' ')[0] : '25/09/2026';
+
+                    const payMethod = String(row['วิธีการชำระเงิน'] || row['Payment Method'] || 'COD').trim().toUpperCase();
+                    const isPaid = (payMethod !== 'COD' && payMethod !== '');
+
+                    const excelTotal = parseFloat(String(row['ยอดเงิน(บาท)'] || row['ยอดเงิน'] || 0).replace(/,/g, '')) || 0;
+                    const shipping = parseFloat(String(row['ค่าจัดส่ง(บาท)'] || row['ค่าจัดส่ง'] || 0).replace(/,/g, '')) || 0;
+
+                    const itemsStr = String(row['สินค้า (จำนวนชิ้น)'] || row['รายการสินค้า'] || '').trim();
+                    let items = [];
+
+                    if (itemsStr) {
+                        const rawItems = itemsStr.split(/,\s*(?=[^()]+(?:\(|$))/);
+                        rawItems.forEach(itemRaw => {
+                            const match = itemRaw.trim().match(/^(.+?)\s*\(([\d\.]+)\)\s*$/);
+                            if (match) {
+                                const itemName = match[1].trim();
+                                const qty = parseFloat(match[2]) || 1;
+                                const unitPrice = getUnitPriceStrict(itemName);
+                                items.push({
+                                    name: itemName,
+                                    qty: qty,
+                                    price: unitPrice
+                                });
+                            }
+                        });
+                    }
+
+                    const calculatedSubtotal = items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+                    const calculatedGrandTotal = calculatedSubtotal + shipping;
+
+                    let discountAmount = 0;
+                    let hasDiscount = false;
+
+                    if (!isPaid && excelTotal > 0) {
+                        if (calculatedGrandTotal > excelTotal) {
+                            discountAmount = calculatedGrandTotal - excelTotal;
+                            hasDiscount = true;
+                        }
+                    }
+
+                    if (items.length > 0) {
+                        newBills.push({
+                            id: index + 1,
+                            selected: true,
+                            customer: customerName,
+                            date: date,
+                            shipping: shipping,
+                            items: items,
+                            excelTotal: excelTotal,
+                            payMethod: payMethod,
+                            isPaid: isPaid,
+                            discountAmount: discountAmount,
+                            hasDiscount: hasDiscount,
+                            calculatedGrandTotal: calculatedGrandTotal
+                        });
+                    }
+                });
+
+                if (newBills.length > 0) {
+                    billsData = newBills;
+                    document.getElementById('excelOrderStatus').classList.remove('hidden');
+                    updateDocumentTitle();
+                    renderApp();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // 2. อัปโหลดไฟล์ SKU ทับ
+        document.getElementById('skuInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet);
+
+                processSKURows(rows);
+
+                document.getElementById('skuStatus').classList.remove('hidden');
+                recalculatePrices();
+                renderApp();
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function recalculatePrices() {
+            billsData.forEach(bill => {
+                bill.items.forEach(item => {
+                    item.price = getUnitPriceStrict(item.name);
+                });
+                const subtotal = bill.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+                bill.calculatedGrandTotal = subtotal + bill.shipping;
+                if (!bill.isPaid && bill.excelTotal > 0 && bill.calculatedGrandTotal > bill.excelTotal) {
+                    bill.discountAmount = bill.calculatedGrandTotal - bill.excelTotal;
+                    bill.hasDiscount = true;
+                } else {
+                    bill.discountAmount = 0;
+                    bill.hasDiscount = false;
+                }
+            });
+        }
+
+        function formatMoney(amount) {
+            return new Object(amount).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        }
+
+        function getBillTotals(bill) {
+            const subtotal = bill.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+            const grandTotal = subtotal + (bill.shipping || 0);
+            return { subtotal, shipping: bill.shipping || 0, grandTotal };
+        }
+
+        function renderSidebarList() {
+            const container = document.getElementById('billSelectList');
+            container.innerHTML = '';
+
+            if (billsData.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">ไม่มีรายการบิล (โปรดอัปโหลด Excel ออเดอร์)</div>`;
+                document.getElementById('selectedCountBadge').innerText = 0;
+                return;
+            }
+
+            billsData.forEach(bill => {
+                const totals = getBillTotals(bill);
+                let badgeHTML = '';
+                
+                if (bill.isPaid) {
+                    badgeHTML = `<span class="bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded text-[10px] ml-1">โอนแล้ว (${bill.payMethod})</span>`;
+                } else if (bill.hasDiscount) {
+                    badgeHTML = `<span class="bg-red-100 text-red-800 font-bold px-1.5 py-0.5 rounded text-[10px] ml-1">ลด ฿${formatMoney(bill.discountAmount)}</span>`;
+                }
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `flex items-center justify-between p-2.5 rounded-lg border transition ${
+                    bill.selected ? 'bg-slate-50 border-blue-200' : 'bg-white border-slate-200 opacity-60'
+                }`;
+
+                itemDiv.innerHTML = `
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <input type="checkbox" ${bill.selected ? 'checked' : ''} onchange="toggleBillSelection(${bill.id})" class="w-4 h-4 text-blue-600 rounded cursor-pointer">
+                        <div class="truncate">
+                            <div class="text-xs font-bold text-slate-800 truncate">${bill.customer} ${badgeHTML}</div>
+                            <div class="text-[11px] text-slate-500">${bill.items.length} รายการ | ฿${formatMoney(totals.grandTotal)}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="openEditModal(${bill.id})" class="p-1 text-slate-400 hover:text-blue-600"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button onclick="deleteBill(${bill.id})" class="p-1 text-slate-400 hover:text-red-600"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>
+                `;
+                container.appendChild(itemDiv);
+            });
+
+            const selectedCount = billsData.filter(b => b.selected).length;
+            document.getElementById('selectedCountBadge').innerText = selectedCount;
+        }
+
+        function toggleBillSelection(id) {
+            const bill = billsData.find(b => b.id === id);
+            if (bill) {
+                bill.selected = !bill.selected;
+                renderApp();
+            }
+        }
+
+        function toggleSelectAll() {
+            const allSelected = billsData.every(b => b.selected);
+            billsData.forEach(b => b.selected = !allSelected);
+            renderApp();
+        }
+
+        function changeLayoutMode(mode) {
+            currentLayout = mode;
+            renderPrintPages();
+        }
+
+        function generateBillHTML(bill, isCompact = false) {
+            const totals = getBillTotals(bill);
+
+            let paymentBadge = '';
+            if (bill.isPaid) {
+                paymentBadge = `<span class="inline-block bg-emerald-500 text-white font-bold px-3 py-1 rounded text-xs shadow-sm">✓ จ่ายเงินแล้ว (โอนผ่าน ${bill.payMethod})</span>`;
+            } else if (bill.hasDiscount) {
+                paymentBadge = `<span class="inline-block bg-red-500 text-white font-bold px-3 py-1 rounded text-xs shadow-sm">⚠️ ออเดอร์นี้มีส่วนลด ${formatMoney(bill.discountAmount)} บาท (ยอดจัดเก็บ: ${formatMoney(bill.excelTotal)} B)</span>`;
+            } else {
+                paymentBadge = `<span class="inline-block bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded text-[11px]">ชำระเงินปลายทาง / COD</span>`;
+            }
+
+            return `
+                <div class="${isCompact ? 'text-[11px]' : 'text-xs'} text-slate-800 flex flex-col justify-between h-full">
+                    <div>
+                        <div class="flex justify-between items-start border-b-2 border-slate-800 pb-3 mb-3">
+                            <div>
+                                <h2 class="${isCompact ? 'text-base' : 'text-xl'} font-bold tracking-tight text-slate-900">${companyInfo.nameTh}</h2>
+                                <p class="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">${companyInfo.nameEn}</p>
+                                <p class="mt-1 text-slate-600 max-w-md">${companyInfo.address}</p>
+                                <p class="text-slate-600"><span class="font-bold">โทร:</span> ${companyInfo.tel}</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="${isCompact ? 'text-base' : 'text-lg'} font-extrabold uppercase tracking-wide bg-slate-900 text-white px-3 py-1 rounded inline-block">
+                                    บิลส่งของ
+                                </div>
+                                <div class="mt-2 text-slate-600">
+                                    <div><span class="font-semibold">วันที่ออกบิล:</span> ${bill.date}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 mb-3 flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-slate-500 uppercase text-[10px] block">ชื่อลูกค้า / Customer:</span>
+                                <span class="${isCompact ? 'text-xs' : 'text-sm'} font-bold text-slate-900">${bill.customer}</span>
+                            </div>
+                            <div class="text-right">
+                                ${paymentBadge}
+                            </div>
+                        </div>
+
+                        <table class="w-full border-collapse border border-slate-300 text-left mb-3">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
+                                    <th class="border-r border-slate-300 p-1.5 text-center w-8">#</th>
+                                    <th class="border-r border-slate-300 p-1.5">รายการสินค้า</th>
+                                    <th class="border-r border-slate-300 p-1.5 text-center w-16">จำนวน</th>
+                                    <th class="border-r border-slate-300 p-1.5 text-right w-24">ราคา/หน่วย</th>
+                                    <th class="p-1.5 text-right w-24">ราคารวม</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${bill.items.map((item, idx) => `
+                                    <tr class="border-b border-slate-200 hover:bg-slate-50 ${item.price === 0 ? 'bg-red-50/50' : ''}">
+                                        <td class="border-r border-slate-200 p-1.5 text-center">${idx + 1}</td>
+                                        <td class="border-r border-slate-200 p-1.5 font-medium">
+                                            ${item.name}${item.price === 0 ? '<span class="text-[10px] text-red-500 block font-normal">(ไม่พบราคาในตาราง SKU)</span>' : ''}
+                                        </td>
+                                        <td class="border-r border-slate-200 p-1.5 text-center font-semibold">x ${item.qty}</td>
+                                        <td class="border-r border-slate-200 p-1.5 text-right ${item.price === 0 ? 'text-red-600 font-bold' : ''}">${formatMoney(item.price)}</td>
+                                        <td class="p-1.5 text-right font-semibold ${item.price === 0 ? 'text-red-600' : ''}">${formatMoney(item.qty * item.price)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-end border-t border-slate-300 pt-2 mt-2">
+                            <div class="text-[10px] text-slate-500 max-w-xs space-y-1">
+                                <p>* ได้รับสินค้าตามรายการข้างต้นถูกต้องและอยู่ในสภาพเรียบร้อย</p>
+                                <div class="pt-6 flex gap-8">
+                                    <div class="text-center border-t border-dashed border-slate-400 pt-1 w-28">
+                                        ผู้รับของ / Customer
+                                    </div>
+                                    <div class="text-center border-t border-dashed border-slate-400 pt-1 w-28">
+                                        ผู้ส่งของ / Authorized
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="w-52 space-y-1 text-right">
+                                <div class="flex justify-between text-slate-600">
+                                    <span>รวมเงิน (Subtotal):</span>
+                                    <span class="font-semibold">${formatMoney(totals.subtotal)} B</span>
+                                </div>
+                                <div class="flex justify-between text-slate-600">
+                                    <span>ค่าจัดส่ง (Shipping):</span>
+                                    <span class="font-semibold">+${formatMoney(totals.shipping)} B</span>
+                                </div>
+                                <div class="flex justify-between items-center text-slate-900 border-t-2 border-slate-800 pt-1 mt-1">
+                                    <span class="font-bold">ยอดเก็บทั้งสิ้น:</span>
+                                    <span class="${isCompact ? 'text-sm' : 'text-base'} font-black ${bill.hasDiscount ? 'text-red-600' : 'text-blue-700'}">${formatMoney(totals.grandTotal)} B</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPrintPages() {
+            const container = document.getElementById('printArea');
+            container.innerHTML = '';
+
+            const selectedBills = billsData.filter(b => b.selected);
+
+            if (selectedBills.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white p-8 sm:p-12 rounded-xl shadow border text-center max-w-md my-8 no-print">
+                        <i class="fa-solid fa-folder-open text-3xl sm:text-4xl text-slate-300 mb-3 block"></i>
+                        <h4 class="text-sm sm:text-base font-bold text-slate-700">ไม่มีบิลถูกเลือก</h4>
+                        <p class="text-xs text-slate-500 mt-1">กรุณาอัปโหลดไฟล์ Excel ออเดอร์ หรือกดปุ่ม "สร้างบิลใหม่"</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (currentLayout === 'full') {
+                selectedBills.forEach(bill => {
+                    const pageWrapper = document.createElement('div');
+                    pageWrapper.className = 'mobile-preview-wrapper';
+                    
+                    const pageDiv = document.createElement('div');
+                    pageDiv.className = 'a4-page a4-page-preview rounded-lg border border-slate-200';
+                    pageDiv.innerHTML = generateBillHTML(bill, false);
+                    
+                    pageWrapper.appendChild(pageDiv);
+                    container.appendChild(pageWrapper);
+                });
+            } else {
+                for (let i = 0; i < selectedBills.length; i += 2) {
+                    const pageWrapper = document.createElement('div');
+                    pageWrapper.className = 'mobile-preview-wrapper';
+
+                    const pageDiv = document.createElement('div');
+                    pageDiv.className = 'a4-page a4-page-preview rounded-lg border border-slate-200 flex flex-col justify-between';
+                    
+                    const bill1 = selectedBills[i];
+                    const bill2 = selectedBills[i + 1];
+
+                    let pageContent = `<div class="h-[130mm]">${generateBillHTML(bill1, true)}</div>`;
+
+                    if (bill2) {
+                        pageContent += `
+                            <div class="half-a4-divider no-print"></div>
+                            <div class="h-[130mm] pt-2 border-t border-dashed border-slate-300 print:border-slate-400">${generateBillHTML(bill2, true)}</div>
+                        `;
+                    } else {
+                        pageContent += `
+                            <div class="half-a4-divider no-print"></div>
+                            <div class="h-[130mm] flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg text-slate-300 text-xs font-medium no-print">
+                                (พื้นที่ว่างสำหรับครึ่งล่าง)
+                            </div>
+                        `;
+                    }
+
+                    pageDiv.innerHTML = pageContent;
+                    pageWrapper.appendChild(pageDiv);
+                    container.appendChild(pageWrapper);
+                }
+            }
+        }
+
+        function openCreateModal() {
+            document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-plus text-emerald-400"></i> สร้างบิลใหม่`;
+            document.getElementById('editBillId').value = '';
+            document.getElementById('formCustomer').value = '';
+            document.getElementById('formDate').value = '25/09/2026';
+            document.getElementById('formShipping').value = 50;
+
+            const container = document.getElementById('modalItemsContainer');
+            container.innerHTML = '';
+            addProductRow('', 1, 0);
+
+            calculateModalTotal();
+            document.getElementById('billModal').classList.remove('hidden');
+        }
+
+        function openEditModal(id) {
+            const bill = billsData.find(b => b.id === id);
+            if (!bill) return;
+
+            document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-blue-400"></i> แก้ไขข้อมูลบิล`;
+            document.getElementById('editBillId').value = bill.id;
+            document.getElementById('formCustomer').value = bill.customer;
+            document.getElementById('formDate').value = bill.date;
+            document.getElementById('formShipping').value = bill.shipping;
+
+            const container = document.getElementById('modalItemsContainer');
+            container.innerHTML = '';
+            
+            bill.items.forEach(item => {
+                addProductRow(item.name, item.qty, item.price);
+            });
+
+            calculateModalTotal();
+            document.getElementById('billModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('billModal').classList.add('hidden');
+        }
+
+        // เพิ่มการ์ดสินค้าแบบ Responsive ใน Modal
+        function addProductRow(name = '', qty = 1, price = 0) {
+            const container = document.getElementById('modalItemsContainer');
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'item-row bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-2';
+            cardDiv.innerHTML = `
+                <div class="flex-1">
+                    <input type="text" value="${name}" class="item-name w-full border border-slate-300 rounded-lg p-2 text-xs" placeholder="ชื่อสินค้า">
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-20">
+                        <input type="number" value="${qty}" min="1" oninput="calculateModalTotal()" class="item-qty w-full border border-slate-300 rounded-lg p-2 text-center text-xs" placeholder="จำนวน">
+                    </div>
+                    <div class="w-28">
+                        <input type="number" value="${price}" min="0" oninput="calculateModalTotal()" class="item-price w-full border border-slate-300 rounded-lg p-2 text-right text-xs" placeholder="ราคา/หน่วย">
+                    </div>
+                    <div class="w-24 text-right font-bold text-slate-700 text-xs item-row-total">
+                        ${formatMoney(qty * price)}
+                    </div>
+                    <button type="button" onclick="removeProductRow(this)" class="p-2 text-red-500 hover:text-red-700 text-center">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(cardDiv);
+            calculateModalTotal();
+        }
+
+        function removeProductRow(btn) {
+            const row = btn.closest('.item-row');
+            row.remove();
+            calculateModalTotal();
+        }
+
+        function calculateModalTotal() {
+            let subtotal = 0;
+            const rows = document.querySelectorAll('#modalItemsContainer .item-row');
+            
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                const total = qty * price;
+                row.querySelector('.item-row-total').innerText = formatMoney(total) + ' B';
+                subtotal += total;
+            });
+
+            const shipping = parseFloat(document.getElementById('formShipping').value) || 0;
+            document.getElementById('formTotal').value = subtotal + shipping;
+        }
+
+        function saveBillData() {
+            const customer = document.getElementById('formCustomer').value.trim();
+            const date = document.getElementById('formDate').value.trim();
+            const shipping = parseFloat(document.getElementById('formShipping').value) || 0;
+            const editId = document.getElementById('editBillId').value;
+
+            if (!customer) {
+                alert('กรุณากรอกชื่อลูกค้า');
+                return;
+            }
+
+            const items = [];
+            const rows = document.querySelectorAll('#modalItemsContainer .item-row');
+            rows.forEach(row => {
+                const name = row.querySelector('.item-name').value.trim();
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                if (name && qty > 0) {
+                    items.push({ name, qty, price });
+                }
+            });
+
+            if (items.length === 0) {
+                alert('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ');
+                return;
+            }
+
+            if (editId) {
+                const bill = billsData.find(b => b.id === parseInt(editId));
+                if (bill) {
+                    bill.customer = customer;
+                    bill.date = date;
+                    bill.shipping = shipping;
+                    bill.items = items;
+                    bill.calculatedGrandTotal = items.reduce((s, i) => s + (i.qty * i.price), 0) + shipping;
+                    if (!bill.isPaid && bill.excelTotal > 0 && bill.calculatedGrandTotal > bill.excelTotal) {
+                        bill.discountAmount = bill.calculatedGrandTotal - bill.excelTotal;
+                        bill.hasDiscount = true;
+                    } else {
+                        bill.discountAmount = 0;
+                        bill.hasDiscount = false;
+                    }
+                }
+            } else {
+                const newId = billsData.length > 0 ? Math.max(...billsData.map(b => b.id)) + 1 : 1;
+                const calculatedGrandTotal = items.reduce((s, i) => s + (i.qty * i.price), 0) + shipping;
+                billsData.push({
+                    id: newId,
+                    selected: true,
+                    customer,
+                    date,
+                    shipping,
+                    items,
+                    excelTotal: calculatedGrandTotal,
+                    payMethod: 'COD',
+                    isPaid: false,
+                    discountAmount: 0,
+                    hasDiscount: false,
+                    calculatedGrandTotal
+                });
+            }
+
+            closeModal();
+            updateDocumentTitle();
+            renderApp();
+        }
+
+        function deleteBill(id) {
+            if (confirm('คุณต้องการลบบิลรายการนี้ใช่หรือไม่?')) {
+                billsData = billsData.filter(b => b.id !== id);
+                updateDocumentTitle();
+                renderApp();
+            }
+        }
+
+        function renderApp() {
+            renderSidebarList();
+            renderPrintPages();
+        }
+
+        window.onload = function() {
+            loadEmbeddedSKUFile();
+            renderApp();
+        };
+    </script>
+</body>
+</html>
