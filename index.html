@@ -248,6 +248,17 @@
                         เลือกทั้งหมด
                     </button>
                 </div>
+                
+                <!-- สรุปจำนวนยอดโอนและยอดส่วนลด -->
+                <div id="billSummaryBadge" class="flex items-center gap-2 text-[11px] font-medium pt-1 border-t border-slate-100 hidden">
+                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <i class="fa-solid fa-circle-check text-[10px]"></i> โอน <span id="paidCount">0</span>
+                    </span>
+                    <span class="bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <i class="fa-solid fa-tags text-[10px]"></i> ส่วนลด <span id="discountCount">0</span>
+                    </span>
+                </div>
+
                 <div id="billSelectList" class="space-y-2 max-h-60 sm:max-h-72 overflow-y-auto touch-scroll pr-1"></div>
             </div>
         </aside>
@@ -575,12 +586,32 @@
 
         function renderSidebarList() {
             const container = document.getElementById('billSelectList');
+            const summaryBox = document.getElementById('billSummaryBadge');
+            const paidCountEl = document.getElementById('paidCount');
+            const discountCountEl = document.getElementById('discountCount');
+            
             container.innerHTML = '';
 
             if (billsData.length === 0) {
                 container.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">ไม่มีรายการบิล (โปรดอัปโหลด Excel ออเดอร์)</div>`;
                 document.getElementById('selectedCountBadge').innerText = 0;
+                if (summaryBox) summaryBox.classList.add('hidden');
                 return;
+            }
+
+            // คำนวณจำนวนยอดโอนและส่วนลด
+            let totalPaid = 0;
+            let totalDiscount = 0;
+
+            billsData.forEach(bill => {
+                if (bill.isPaid) totalPaid++;
+                if (bill.hasDiscount) totalDiscount++;
+            });
+
+            if (summaryBox && paidCountEl && discountCountEl) {
+                paidCountEl.innerText = `${totalPaid} ยอด`;
+                discountCountEl.innerText = `${totalDiscount} ยอด`;
+                summaryBox.classList.remove('hidden');
             }
 
             billsData.forEach(bill => {
